@@ -1,5 +1,4 @@
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_error.h>
 #include <SDL2/SDL_scancode.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -8,14 +7,42 @@
 const int SCREEN_WIDTH = 600;
 const int SCREEN_HEIGHT = 500;
 
-const int GRID_WIDTH = 60;
-const int GRID_HEIGHT = 50;
-
-void randomFill(float *grid) {
-  for(int y = 0; y < GRID_HEIGHT; y++)
-    for(int x = 0; x < GRID_WIDTH; x++)
-      grid[y * GRID_WIDTH + x] = (float)rand() / (float)RAND_MAX; 
+void randomFill(float *baseNoise) {
+  for(int i = 0; i < SCREEN_WIDTH; i++)
+      baseNoise[i] = (float)rand() / (float)RAND_MAX; 
 }
+
+void fractalNoise1D(float* heights, float* baseNoise) {
+  for(int i = 0; i < SCREEN_WIDTH; i++)
+    heights[i] = 0;
+
+  float persistance = 0.5f;
+  float amplitude = 1.0f;
+  float amplitudeAcc = 0.0f;  // accumulated amplitude used to normalize output
+  int octaves = 8;
+  for(int o = 0; o < octaves; o++) {
+    int pitch = SCREEN_WIDTH >> o == 0 ? 1 : SCREEN_WIDTH >> o;
+    for(int x = 0; x < SCREEN_WIDTH; x++) {
+      int sample1 = (x / pitch ) * pitch; 
+      int sample2 = (sample1 + pitch) % SCREEN_WIDTH;
+      float blend = (float)(x - sample1) / (float)pitch;
+      float sample = (1.0f - blend) * baseNoise[sample1] + blend * baseNoise[sample2];
+      heights[x] += sample * amplitude;
+    }
+    amplitudeAcc += amplitude;
+    amplitude *= persistance;
+  }
+
+  // normalize heights
+  for(int i = 0; i < SCREEN_WIDTH; i++) {
+    heights[i] /= amplitudeAcc;
+  }
+}
+
+void clear(uint32_t* pixels) {
+  for(int i = 0; i < SCREEN_HEIGHT * SCREEN_WIDTH; i++)
+    pixels[i] = 0;
+} 
 
 int main() {
   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -23,6 +50,8 @@ int main() {
     exit(1);
   }
 
+  float *baseNoise = malloc(SCREEN_WIDTH * sizeof(float));
+  float *heights = malloc(SCREEN_WIDTH * sizeof(float));
 
   SDL_Window* window = SDL_CreateWindow
 	(
@@ -48,10 +77,6 @@ int main() {
 	);
 
   uint32_t pixels[SCREEN_WIDTH * SCREEN_HEIGHT];
-  float grid[SCREEN_WIDTH / 10 * SCREEN_HEIGHT / 10];
-  for(int i = 0; i < SCREEN_HEIGHT * SCREEN_WIDTH; i++) {
-    pixels[i] = 0x0000FFFF;
-  }
 
 	int running = 1;  
   while(running) {
@@ -65,21 +90,17 @@ int main() {
     const Uint8* keyboard = SDL_GetKeyboardState(NULL);
 
   	if (keyboard[SDL_SCANCODE_Q]) running = 0;
-  	if (keyboard[SDL_SCANCODE_SPACE]) randomFill(grid);
+  	if (keyboard[SDL_SCANCODE_SPACE]) randomFill(baseNoise);
+  	if (keyboard[SDL_SCANCODE_N]) fractalNoise1D(heights, baseNoise);
 
+  	clear(pixels);
 
-  	for(int y = 0; y < SCREEN_HEIGHT; y++)
-  	{
-  	  for(int x = 0; x < SCREEN_WIDTH; x++)
-  	  {
-  	    int gridX = x / 10;
-  	    int gridY = y / 10;
-  	    float shade = grid[gridY * GRID_WIDTH + gridX];
-  	    uint8_t r = 0xff * shade;
-  	    uint8_t g = 0xff * shade;
-  	    uint8_t b = 0xff * shade;
-  	    uint32_t c = (r << 24) | (g << 16) | (b << 8) | (0xff << 0);
-  	    pixels[y * SCREEN_WIDTH + x] = c;
+  	for(int y = 0; y < SCREEN_HEIGHT; y ++) {
+  	  for(int x = 0; x < SCREEN_WIDTH; x++) {
+  	    int colHeight = heights[x] * SCREEN_HEIGHT;
+  	    if(y >= SCREEN_HEIGHT - colHeight) {
+  	      pixels[y * SCREEN_WIDTH + x] = 0x00ff00ff;
+  	    }
   	  }
   	}
   	
@@ -93,5 +114,7 @@ int main() {
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();
+  free(baseNoise);
+  free(heights);
   return 0;
 }
