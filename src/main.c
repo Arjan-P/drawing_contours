@@ -223,7 +223,7 @@ int main() {
         int heightX = x / CELL_SIZE;
         int heightY = y / CELL_SIZE;
         float height = heights2D[heightY * HEIGHT_MAP_WIDTH + heightX];
-        uint32_t c = (height > 0.3f) ? 0x00ff00ff : 0x0000ffff;
+        uint32_t c = (height > 0.4f) ? 0x00fff0ff : 0x000000ff;
         pixels[y * SCREEN_WIDTH + x] = c;
       }
     }
@@ -233,7 +233,7 @@ int main() {
       for (int x = 0; x < HEIGHT_MAP_WIDTH - 1; x++) {
         int screenX = x * CELL_SIZE;
         int screenY = y * CELL_SIZE;
-        float threshold = 0.3f;
+        float threshold = 0.4f;
         float tl = heights2D[(y + 0) * (HEIGHT_MAP_WIDTH) + (x + 0)];
         float tr = heights2D[(y + 0) * (HEIGHT_MAP_WIDTH) + (x + 1)];
         float bl = heights2D[(y + 1) * (HEIGHT_MAP_WIDTH) + (x + 0)];
