@@ -2,7 +2,9 @@ Generate height map using fractal noise function:
 
 > Base noise for fractal noise function
 > ![random_fill](./output_images/2026-02-12-185029_621x526_escrotum.png)
+>
 > noise step
+>
 > ![random_fill](./output_images/2026-02-12-184957_622x534_escrotum.png)
 
 Draw contour lines with marching squares:
